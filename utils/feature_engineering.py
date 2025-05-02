@@ -130,32 +130,32 @@ def calculate_distance_to_hq(row_location_str, hq_coords):
 
 # --- Feature Calculation Functions ---
 
-def parse_and_convert_numeric_cols(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Parses specific string columns (like experience ranges) and converts
-    other numeric-like columns (RALs, Overall) to numeric.
+# def parse_and_convert_numeric_cols(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Parses specific string columns (like experience ranges) and converts
+#     other numeric-like columns (RALs, Overall) to numeric.
 
-    Args:
-        df: Input DataFrame.
+#     Args:
+#         df: Input DataFrame.
 
-    Returns:
-        DataFrame with parsed and converted numeric columns added/updated.
-    """
-    df_processed = df.copy() # Work on a copy
+#     Returns:
+#         DataFrame with parsed and converted numeric columns added/updated.
+#     """
+#     df_processed = df.copy() # Work on a copy
 
-    # Apply custom parsing to experience columns
-    df_processed['Years Experience_parsed'] = df_processed['Years Experience'].apply(parse_experience_string)
-    df_processed['Years Experience.1_parsed'] = df_processed['Years Experience.1'].apply(parse_experience_string)
+#     # Apply custom parsing to experience columns
+#     df_processed['Years Experience_parsed'] = df_processed['Years Experience'].apply(parse_experience_string)
+#     df_processed['Years Experience.1_parsed'] = df_processed['Years Experience.1'].apply(parse_experience_string)
 
-    # Convert RAL columns and Overall to numeric, coercing errors
-    # Added 'Overall' here as it's used in the final score and may need cleaning
-    ral_overall_cols = ['Current Ral', 'Expected Ral', 'Minimum Ral', 'Ral Maximum', 'Overall']
-    for col in ral_overall_cols:
-         # Simple conversion. If 'k' format exists, this will turn it to NaN.
-         # A more complex parser would be needed for 'k'.
-         df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
+#     # Convert RAL columns and Overall to numeric, coercing errors
+#     # Added 'Overall' here as it's used in the final score and may need cleaning
+#     ral_overall_cols = ['Current Ral', 'Expected Ral', 'Minimum Ral', 'Ral Maximum', 'Overall']
+#     for col in ral_overall_cols:
+#          # Simple conversion. If 'k' format exists, this will turn it to NaN.
+#          # A more complex parser would be needed for 'k'.
+#          df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
 
-    return df_processed
+#     return df_processed
 
 def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
     """
@@ -170,15 +170,12 @@ def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
     """
     # Simple inverse of difference, scaled. Smaller difference = higher score.
     def _calculate_score(candidate_exp_parsed, job_req_exp_parsed):
-        # pd.isna handles both np.nan and None
-        if pd.isna(candidate_exp_parsed) or pd.isna(job_req_exp_parsed):
-            return np.nan
-        diff = abs(candidate_exp_parsed - job_req_exp_parsed)
+        diff = candidate_exp_parsed - job_req_exp_parsed
         # Score decreases as difference increases, never 0 unless diff is infinite
-        return 1 / (diff + 1)
+        return diff
 
     return df.apply(
-        lambda row: _calculate_score(row.get('Years Experience_parsed'), row.get('Years Experience.1_parsed')), # Use .get for safety
+        lambda row: _calculate_score(row.get('Years Experience'), row.get('Years Experience.1')), # Use .get for safety
         axis=1
     )
 
@@ -199,8 +196,8 @@ def calculate_salary_fit_score(df: pd.DataFrame) -> pd.Series:
         if pd.isna(expected_ral) or pd.isna(min_ral) or pd.isna(max_ral):
             return np.nan
 
-        if min_ral > max_ral: # Handle illogical ranges
-             return np.nan
+        # if min_ral > max_ral: # Handle illogical ranges
+        #      return np.nan
 
         if expected_ral >= min_ral and expected_ral <= max_ral:
             return 1.0 # Perfect fit
