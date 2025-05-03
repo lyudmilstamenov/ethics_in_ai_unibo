@@ -130,102 +130,181 @@ def calculate_distance_to_hq(row_location_str, hq_coords):
 
 # --- Feature Calculation Functions ---
 
-# def parse_and_convert_numeric_cols(df: pd.DataFrame) -> pd.DataFrame:
-#     """
-#     Parses specific string columns (like experience ranges) and converts
-#     other numeric-like columns (RALs, Overall) to numeric.
+def calculate_study_title_score(df: pd.DataFrame) -> pd.Series:
+    ordered_levels = [
+        "Middle school diploma",
+        "High school graduation",
+        "Professional qualification",
+        "Three-year degree",
+        "Five-year degree",
+        "master's degree",
+        "Doctorate"
+    ]
 
-#     Args:
-#         df: Input DataFrame.
+    level_to_rank = {level: idx for idx, level in enumerate(ordered_levels)}
+    max_distance = len(ordered_levels) - 1  # 6 in this case
 
-#     Returns:
-#         DataFrame with parsed and converted numeric columns added/updated.
-#     """
-#     df_processed = df.copy() # Work on a copy
+    def _calculate_score(candidate_level, required_level):
+        if pd.isna(candidate_level) or pd.isna(required_level):
+            return np.nan
+        if candidate_level not in level_to_rank or required_level not in level_to_rank:
+            return np.nan
 
-#     # Apply custom parsing to experience columns
-#     df_processed['Years Experience_parsed'] = df_processed['Years Experience'].apply(parse_experience_string)
-#     df_processed['Years Experience.1_parsed'] = df_processed['Years Experience.1'].apply(parse_experience_string)
-
-#     # Convert RAL columns and Overall to numeric, coercing errors
-#     # Added 'Overall' here as it's used in the final score and may need cleaning
-#     ral_overall_cols = ['Current Ral', 'Expected Ral', 'Minimum Ral', 'Ral Maximum', 'Overall']
-#     for col in ral_overall_cols:
-#          # Simple conversion. If 'k' format exists, this will turn it to NaN.
-#          # A more complex parser would be needed for 'k'.
-#          df_processed[col] = pd.to_numeric(df_processed[col], errors='coerce')
-
-#     return df_processed
-
-def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
-    """
-    Calculates a score indicating how well candidate experience matches job requirement.
-    Assumes 'Years Experience_parsed' and 'Years Experience.1_parsed' exist.
-
-    Args:
-        df: Input DataFrame with parsed experience columns.
-
-    Returns:
-        A pandas Series with experience match scores.
-    """
-    # Simple inverse of difference, scaled. Smaller difference = higher score.
-    def _calculate_score(candidate_exp_parsed, job_req_exp_parsed):
-        diff = candidate_exp_parsed - job_req_exp_parsed
-        # Score decreases as difference increases, never 0 unless diff is infinite
-        return diff
+        diff = level_to_rank[candidate_level] - level_to_rank[required_level]
+        return diff / max_distance  # preserve sign, normalize
 
     return df.apply(
-        lambda row: _calculate_score(row.get('Years Experience'), row.get('Years Experience.1')), # Use .get for safety
+        lambda row: _calculate_score(row.get('Study Title'), row.get('Study Level')),
         axis=1
     )
 
-def calculate_salary_fit_score(df: pd.DataFrame) -> pd.Series:
-    """
-    Calculates a score indicating how well expected RAL fits within the job range.
-    Assumes RAL columns are numeric.
 
-    Args:
-        df: Input DataFrame with numeric RAL columns.
+def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
+    candidate_exps = df['Years Experience_int']
+    job_exps = df['Years Experience.1_int']
+    global_min = pd.concat([candidate_exps, job_exps]).min()
+    global_max = pd.concat([candidate_exps, job_exps]).max()
+    max_range = global_max - global_min if global_max != global_min else 1  
+ 
+    def _calculate_score(candidate_exp, job_req_exp):
+        if pd.isna(job_req_exp):
+            return 0
 
-    Returns:
-        A pandas Series with salary fit scores.
-    """
-    # Score based on whether expected RAL is within the min/max range.
+        diff = candidate_exp - job_req_exp
+        return diff / max_range
+
+    return df.apply(
+        lambda row: _calculate_score(row.get('Years Experience_int'), row.get('Years Experience.1_int')),
+        axis=1
+    ) 
+
+def calculate_salary_fit_score(df: pd.DataFrame, is_expected=True) -> pd.Series:
     def _calculate_score(expected_ral, min_ral, max_ral):
-        # pd.isna handles both np.nan and None
+
         if pd.isna(expected_ral) or pd.isna(min_ral) or pd.isna(max_ral):
             return np.nan
 
-        # if min_ral > max_ral: # Handle illogical ranges
-        #      return np.nan
-
         if expected_ral >= min_ral and expected_ral <= max_ral:
-            return 1.0 # Perfect fit
+            return 1.0 
 
-        # If outside the range, score decreases with distance from the range
         if expected_ral < min_ral:
-            distance = min_ral - expected_ral
-        else: # expected_ral > max_ral
+            distance = expected_ral - min_ral
+        elif expected_ral > max_ral:
             distance = expected_ral - max_ral
 
-        # Scale the distance (adjust denominator based on expected RAL scale)
-        # Using the range size + min_ral as a scaling factor
         range_size = max_ral - min_ral
         scale_factor = range_size if range_size > 0 else min_ral # Avoid zero/negative division
 
-        # If min_ral is also 0 or negative, use a default scale factor
-        if scale_factor <= 0: scale_factor = 1000 # Default scale if range/min is non-positive
+        if scale_factor <= 0: scale_factor = 1000 
 
-        # Simple scaled inverse distance for scores > 0
-        score = 1 / (distance / scale_factor + 1)
-
-        return score
-
-    # Use .get for safety in case columns are missing
+        return distance / scale_factor
     return df.apply(
-        lambda row: _calculate_score(row.get('Expected Ral'), row.get('Minimum Ral'), row.get('Ral Maximum')),
+        lambda row: _calculate_score(row.get('Expected Ral' if is_expected else 'Current Ral'), row.get('Minimum Ral'), row.get('Ral Maximum')),
         axis=1
     )
+
+
+from sentence_transformers import SentenceTransformer, util
+import numpy as np
+
+model = SentenceTransformer('all-MiniLM-L6-v2')  # Lightweight, fast, accurate
+
+def calculate_study_area_score(df):
+    # Precompute embeddings
+    all_study_areas = pd.concat([df['Study area'], df['Study Area.1']]).dropna().unique()
+    embeddings = {s: model.encode(s, convert_to_tensor=True) for s in all_study_areas}
+
+    def _score(a, b):
+        if pd.isna(a) or pd.isna(b):
+            return np.nan
+        emb_a = embeddings.get(a)
+        emb_b = embeddings.get(b)
+        return float(util.cos_sim(emb_a, emb_b))
+
+    return df.apply(lambda row: _score(row.get('Study area'), row.get('Study Area.1')), axis=1)
+
+def calculate_professional_similarity_score(df: pd.DataFrame) -> pd.Series:
+    def build_text(*fields):
+        non_empty = [str(f).strip() for f in fields if pd.notna(f) and str(f).strip()]
+        if not non_empty:
+            return None
+        return ' | '.join(non_empty)
+
+    embedding_cache = {}
+
+    def get_embedding(text):
+        if text in embedding_cache:
+            return embedding_cache[text]
+        embedding = model.encode(text, convert_to_tensor=True)
+        embedding_cache[text] = embedding
+        return embedding
+
+    def _similarity(row):
+        candidate_text = build_text(row.get('Sector'), row.get('Last Role'))
+        job_text = build_text(row.get('Job Family Hiring'), row.get('Job Title Hiring'))
+
+        if candidate_text is None or job_text is None:
+            return np.nan
+
+        emb_a = get_embedding(candidate_text)
+        emb_b = get_embedding(job_text)
+        return float(util.cos_sim(emb_a, emb_b))
+
+    return df.apply(_similarity, axis=1)
+
+def create_candidate_text(row):
+    parts = []
+
+    if pd.notna(row.get('Study Title')) and pd.notna(row.get('Study area')):
+        parts.append(f"{row['Study Title']} in {row['Study area']}")
+    elif pd.notna(row.get('Study Title')):
+        parts.append(f"Studied {row['Study Title']}")
+    elif pd.notna(row.get('Study area')):
+        parts.append(f"Studied in {row['Study area']}")
+
+    if pd.notna(row.get('Sector')):
+        parts.append(f"Worked in the {row['Sector']} sector")
+
+    if pd.notna(row.get('Last Role')):
+        parts.append(f"Last held the role of {row['Last Role']}")
+
+    if pd.notna(row.get('Years Experience')):
+        parts.append(f"with {row['Years Experience']} years of experience")
+
+    if pd.notna(row.get('TAG')):
+        parts.append(f"Key skills include: {row['TAG']}")
+
+    return ". ".join(parts) + "."
+
+def create_job_text(row):
+    parts = []
+
+    if pd.notna(row.get('Job Title Hiring')):
+        parts.append(f"Job title: {row['Job Title Hiring']}")
+
+    if pd.notna(row.get('Job Family Hiring')):
+        parts.append(f"Department: {row['Job Family Hiring']}")
+
+    if pd.notna(row.get('Recruitment Request')):
+        parts.append(f"Recruitment context: {row['Recruitment Request']}")
+
+    if pd.notna(row.get('Job Description')):
+        parts.append(f"Job description: {row['Job Description']}")
+
+    if pd.notna(row.get('Candidate Profile')):
+        parts.append(f"Ideal candidate profile: {row['Candidate Profile']}")
+
+    if pd.notna(row.get('Study Level')) and pd.notna(row.get('Study Area.1')):
+        parts.append(f"Educational requirement: {row['Study Level']} in {row['Study Area.1']}")
+    elif pd.notna(row.get('Study Level')):
+        parts.append(f"Educational requirement: {row['Study Level']}")
+    elif pd.notna(row.get('Study Area.1')):
+        parts.append(f"Field of study required: {row['Study Area.1']}")
+
+    if pd.notna(row.get('Years Experience.1')):
+        parts.append(f"Requires {row['Years Experience.1']} years of experience")
+
+    return ". ".join(parts) + "."
 
 
 def prepare_nlp_text_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -239,30 +318,6 @@ def prepare_nlp_text_columns(df: pd.DataFrame) -> pd.DataFrame:
         DataFrame with 'candidate_text' and 'job_text' columns added.
     """
     df_processed = df.copy() # Work on a copy
-
-    # Function to create a text summary for the candidate
-    def create_candidate_text(row):
-        # Combine relevant candidate features into a descriptive string
-        parts = []
-        # Include columns relevant to candidate's background/profile
-        # Corrected 'Study area' to 'Study Area' based on user's column list
-        candidate_cols = ['Study Area', 'Sector', 'Last Role']
-        for col in candidate_cols:
-            if pd.notna(row.get(col)): parts.append(f"{str(col).replace('_', ' ')}: {str(row[col])}")
-        # Add parsed experience if it provides useful context as text
-        if pd.notna(row.get('Years Experience_parsed')): parts.append(f"Experience: {row['Years Experience_parsed']} years")
-        return ". ".join(parts) if parts else ""
-
-    # Function to combine relevant job text
-    def create_job_text(row):
-        parts = []
-         # Include columns relevant to job requirements
-        job_cols = ['Job Title Hiring', 'Job Description', 'Candidate Profile', 'Study Area.1']
-        for col in job_cols:
-             if pd.notna(row.get(col)): parts.append(f"{str(col).replace('_', ' ')}: {str(row[col])}")
-        # Add parsed required experience as text
-        if pd.notna(row.get('Years Experience.1_parsed')): parts.append(f"Required Experience: {row['Years Experience.1_parsed']} years")
-        return ". ".join(parts) if parts else ""
 
     # Create text columns, filling potential NaNs with empty strings for NLP
     df_processed['candidate_text'] = df_processed.apply(create_candidate_text, axis=1).fillna("")
