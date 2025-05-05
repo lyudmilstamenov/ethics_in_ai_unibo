@@ -15,11 +15,11 @@ release = '0.1.0'  # Version number
 # -- General configuration ---------------------------------------------------
 
 extensions = [
-    'sphinx.ext.autodoc',       # Automatically generate docs from docstrings
-    'sphinx.ext.napoleon',      # Support for Google-style or NumPy-style docstrings
-    'sphinx.ext.viewcode',      # Add links to highlighted source code
-    'sphinx.ext.todo',          # Support for TODO directives
-    'myst_parser',              # Markdown support (optional)
+    'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.todo',
+    # 'myst_parser',
+    'sphinx.ext.viewcode',          
 ]
 
 templates_path = ['_templates']
