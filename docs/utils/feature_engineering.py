@@ -13,7 +13,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
-from typing import Tuple
+from typing import Tuple, List
 # Ignore warnings for cleaner output, but be cautious in real applications
 warnings.filterwarnings('ignore')
 
@@ -467,7 +467,7 @@ def calculate_geo_features(df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
     return distance_km_series, proximity_score_series
 
 
-def calculate_overall_score(df: pd.DataFrame, score_columns: list[str]) -> pd.Series:
+def calculate_overall_score(df: pd.DataFrame, score_columns: List[str]) -> pd.Series:
     """
     Calculates a simple average of specified score columns.
     Includes scaling 'Overall' if present and needed.
@@ -510,7 +510,7 @@ def calculate_overall_score(df: pd.DataFrame, score_columns: list[str]) -> pd.Se
     return df_temp[actual_score_cols].mean(axis=1)
 
 
-def drop_columns_except(df: pd.DataFrame, columns_to_keep: list[str]) -> pd.DataFrame:
+def drop_columns_except(df: pd.DataFrame, columns_to_keep: List[str]) -> pd.DataFrame:
     """
     Drops all columns from the DataFrame except those specified in columns_to_keep.
 
