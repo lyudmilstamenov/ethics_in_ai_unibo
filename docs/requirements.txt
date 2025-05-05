@@ -12,7 +12,7 @@ sentence-transformers
 shap
 scikit-learn
 nbsphinx
-sphinx
 sphinx-rtd-theme
-myst-parser
-myst-nb
+sphinx==8.0.0
+myst-parser==2.0.0
+myst-nb==1.1.0
