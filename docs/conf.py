@@ -15,7 +15,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.todo',
-    'myst_parser',  # If you are using Markdown
+    # 'myst_parser',  # If you are using Markdown
     'sphinx.ext.viewcode',
     'nbsphinx',  # Enable nbsphinx
 ]
