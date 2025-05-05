@@ -11,4 +11,4 @@ seaborn
 sentence-transformers
 shap
 scikit-learn
-myst_parser
+myst-parser
