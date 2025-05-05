@@ -1,50 +1,36 @@
-# -- Path setup --------------------------------------------------------------
+# Configuration file for the Sphinx documentation builder.
 
-import os
-import sys
-sys.path.insert(0, os.path.abspath('../..'))  # Add your project root to sys.path
+# -- Project information
 
+project = 'Ethics in AI'
+copyright = '2025, Lyudmil'
+author = 'Lyudmil'
 
-# -- Project information -----------------------------------------------------
+release = '0.1'
+version = '0.1.0'
 
-project = 'Ethics in AI Project'
-author = 'Lyudmil Stamenov'
-release = '0.1.0'  # Version number
-
-
-# -- General configuration ---------------------------------------------------
+# -- General configuration
 
 extensions = [
-    'sphinx.ext.duration',
-    'sphinx.ext.doctest',
     'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.intersphinx',       
+    'sphinx.ext.napoleon',
+    'sphinx.ext.todo',
+    'myst_parser',  # If you are using Markdown
+    'sphinx.ext.viewcode',
+    'nbsphinx',  # Enable nbsphinx
 ]
 
-templates_path = ['_templates']
-exclude_patterns = []
-
-
-# -- Options for HTML output -------------------------------------------------
-
-html_theme = 'sphinx_rtd_theme'  # Read the Docs theme
-html_static_path = ['_static']
-
-# -- Options for autodoc -----------------------------------------------------
-
-autodoc_default_options = {
-    'members': True,
-    'undoc-members': True,
-    'private-members': False,
-    'show-inheritance': True,
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+    'sphinx': ('https://www.sphinx-doc.org/en/master/', None),
 }
+intersphinx_disabled_domains = ['std']
 
-# -- Napoleon settings (if using Google or NumPy docstrings) -----------------
+templates_path = ['_templates']
 
-napoleon_google_docstring = True
-napoleon_numpy_docstring = True
+# -- Options for HTML output
 
-# -- Options for TODOs -------------------------------------------------------
+html_theme = 'sphinx_rtd_theme'
 
-todo_include_todos = True
+# -- Options for EPUB output
+epub_show_urls = 'footnote'

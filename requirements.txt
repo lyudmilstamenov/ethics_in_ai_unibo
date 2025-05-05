@@ -11,3 +11,6 @@ seaborn
 sentence-transformers
 shap
 scikit-learn
+nbsphinx
+sphinx
+sphinx-rtd-theme
