@@ -1,4 +1,9 @@
 # Configuration file for the Sphinx documentation builder.
+import os
+import sys
+
+# Add the parent directory (project root) to sys.path
+sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information
 
