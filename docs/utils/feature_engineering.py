@@ -13,7 +13,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
-
+from typing import Tuple
 # Ignore warnings for cleaner output, but be cautious in real applications
 warnings.filterwarnings('ignore')
 
@@ -417,7 +417,7 @@ def calculate_nlp_similarity_tfidf(df_with_text: pd.DataFrame, tfidf_vectorizer:
         return pd.Series([np.nan] * len(df_with_text), index=df_with_text.index)
 
 
-def calculate_geo_features(df: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
+def calculate_geo_features(df: pd.DataFrame) -> Tuple[pd.Series, pd.Series]:
     """
     Calculates geographical distance and proximity score to the HQ.
     Assumes residence columns exist.

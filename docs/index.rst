@@ -1,7 +1,7 @@
-My Project Documentation
+Predictive Modeling on Real Hiring Data: Exploring Salary Stereotypes and Bias Mitigation Documentation
 ========================
 
-Welcome to the documentation for **My Project**.
+Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Exploring Salary Stereotypes and Bias Mitigation**.
 
 .. toctree::
    :maxdepth: 2
