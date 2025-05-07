@@ -8,7 +8,7 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
    :caption: Contents:
 
    modules
-   model
+   ../src/model
 
 Indices and tables
 ==================

@@ -11,7 +11,3 @@ Code Documentation
    :undoc-members:
    :show-inheritance:
 
-.. automodule:: model
-   :members:
-   :undoc-members:
-   :show-inheritance:
