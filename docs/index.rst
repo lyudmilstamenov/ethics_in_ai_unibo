@@ -6,13 +6,8 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
 
 .. toctree::
    :maxdepth: 2
-   :caption: Model Notebook:
+   :caption: Model Notebook 5:
 
-   model
-   src/model
-   ../src/model
-   model.ipynb
-   src/model.ipynb
    ../src/model.ipynb
 
 .. toctree::
@@ -21,6 +16,10 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
 
    feature_engineering
    data_cleaning
+
+.. automodule:: model
+   :members:
+   :undoc-members:
 
 Indices and tables
 ==================
