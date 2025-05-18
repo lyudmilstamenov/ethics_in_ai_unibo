@@ -1,7 +1,7 @@
 Main Notebook
-============
+=============
 
-.. automodule:: src.model
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. toctree::
+   :maxdepth: 1
+
+   ../src/model.ipynb
