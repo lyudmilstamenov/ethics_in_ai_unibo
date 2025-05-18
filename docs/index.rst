@@ -7,8 +7,9 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
    :maxdepth: 2
    :caption: Contents:
 
-   modules
-   ../src/model
+   model
+   feature_engineering
+   data_cleaning
 
 Indices and tables
 ==================
