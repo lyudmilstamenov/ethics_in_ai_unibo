@@ -1,8 +1,8 @@
-Main Notebook
+Model Notebook
 =============
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+.. nbinfo::
 
-   model
+This is the main project notebook.
+
+.. nbinput:: ../src/model.ipynb
