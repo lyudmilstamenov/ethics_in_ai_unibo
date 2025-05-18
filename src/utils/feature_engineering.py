@@ -42,7 +42,7 @@ def calculate_study_title_score(df: pd.DataFrame) -> pd.Series:
     level_to_rank = {level: idx for idx, level in enumerate(ordered_levels)}
     max_distance = len(ordered_levels) - 1
 
-    def _calculate_score(candidate_level: str, required_level: str) -> Union[float, np.nan]:
+    def _calculate_score(candidate_level: str, required_level: str):
         if pd.isna(candidate_level) or pd.isna(required_level):
             return np.nan
         if candidate_level not in level_to_rank or required_level not in level_to_rank:
@@ -111,7 +111,7 @@ def calculate_salary_fit_score(df: pd.DataFrame, is_expected: bool = True) -> pd
     pandas.Series
         A Series of salary fit scores.
     """
-    def _calculate_score(expected_ral: float, min_ral: float, max_ral: float) -> Union[float, np.nan]:
+    def _calculate_score(expected_ral: float, min_ral: float, max_ral: float):
         if pd.isna(expected_ral) or pd.isna(min_ral) or pd.isna(max_ral):
             return np.nan
         if expected_ral >= min_ral and expected_ral <= max_ral:
@@ -157,7 +157,7 @@ def calculate_study_area_score(df: pd.DataFrame) -> pd.Series:
     all_study_areas = pd.concat([df['Study area'], df['Study Area.1']]).dropna().unique()
     embeddings = {s: model.encode(s, convert_to_tensor=True) for s in all_study_areas}
 
-    def _score(a: str, b: str) -> Union[float, np.nan]:
+    def _score(a: str, b: str):
         if pd.isna(a) or pd.isna(b):
             return np.nan
         emb_a = embeddings.get(a)
@@ -199,7 +199,7 @@ def calculate_professional_similarity_score(df: pd.DataFrame) -> pd.Series:
         embedding_cache[text] = embedding
         return embedding
 
-    def _similarity(row: pd.Series) -> Union[float, np.nan]:
+    def _similarity(row: pd.Series):
         candidate_text = build_text(row.get('Sector'), row.get('Last Role'))
         job_text = build_text(row.get('Job Family Hiring'), row.get('Job Title Hiring'))
 
