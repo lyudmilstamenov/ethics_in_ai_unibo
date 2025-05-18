@@ -5,6 +5,24 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
 
 .. toctree::
    :maxdepth: 2
+   :caption: Model Notebook:
+
+   model
+
+.. toctree::
+   :maxdepth: 2
+   :caption: ..SRC Model Notebook:
+
+   ../src/model
+
+.. toctree::
+   :maxdepth: 2
+   :caption: SRC Model Notebook:
+
+   src/model
+
+.. toctree::
+   :maxdepth: 2
    :caption: Contents:
 
    model
