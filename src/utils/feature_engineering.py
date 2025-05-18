@@ -8,10 +8,27 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from geopy.distance import geodesic
 from typing import List, Tuple, Optional, Dict, Union
+
 warnings.filterwarnings('ignore')
 
+
 def calculate_study_title_score(df: pd.DataFrame) -> pd.Series:
-    """Calculates normalized difference score between candidate and required study levels"""
+    """
+    Calculate the normalized difference between candidate and required study levels.
+
+    This function maps education levels to a numerical ranking and computes the
+    normalized difference between a candidate's level and the job's requirement.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing 'Study Title' and 'Study Level' columns.
+
+    Returns
+    -------
+    pandas.Series
+        A Series of normalized score differences between candidate and job study levels.
+    """
     ordered_levels = [
         "Middle school diploma",
         "High school graduation",
@@ -41,7 +58,22 @@ def calculate_study_title_score(df: pd.DataFrame) -> pd.Series:
 
 
 def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
-    """Calculates normalized difference between candidate and required experience"""
+    """
+    Calculate the normalized difference between candidate and required experience.
+
+    The function compares years of experience and returns a normalized score
+    based on the range of values found in the dataset.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing 'Years Experience_int' and 'Years Experience.1_int'.
+
+    Returns
+    -------
+    pandas.Series
+        A Series containing normalized experience difference scores.
+    """
     candidate_exps = df['Years Experience_int']
     job_exps = df['Years Experience.1_int']
     global_min = pd.concat([candidate_exps, job_exps]).min()
@@ -61,7 +93,24 @@ def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
 
 
 def calculate_salary_fit_score(df: pd.DataFrame, is_expected: bool = True) -> pd.Series:
-    """Calculates how well expected or current salary fits into the job salary range"""
+    """
+    Calculate the salary fit score between a candidate's salary and job's salary range.
+
+    Returns 1.0 if candidate's salary is within range; otherwise, returns a normalized
+    score based on how far it is from the closest bound.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame with salary information, including candidate and job salary columns.
+    is_expected : bool, optional
+        If True, uses 'Expected Ral'; if False, uses 'Current Ral'. Default is True.
+
+    Returns
+    -------
+    pandas.Series
+        A Series of salary fit scores.
+    """
     def _calculate_score(expected_ral: float, min_ral: float, max_ral: float) -> Union[float, np.nan]:
         if pd.isna(expected_ral) or pd.isna(min_ral) or pd.isna(max_ral):
             return np.nan
@@ -87,8 +136,24 @@ def calculate_salary_fit_score(df: pd.DataFrame, is_expected: bool = True) -> pd
 
 model = SentenceTransformer('all-MiniLM-L6-v2') 
 
+
 def calculate_study_area_score(df: pd.DataFrame) -> pd.Series:
-    """Calculates semantic similarity score between candidate and required study areas"""
+    """
+    Calculate semantic similarity between candidate and required study areas.
+
+    Uses sentence embeddings and cosine similarity to quantify alignment between
+    study fields.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame with 'Study area' and 'Study Area.1' columns.
+
+    Returns
+    -------
+    pandas.Series
+        A Series of cosine similarity scores.
+    """
     all_study_areas = pd.concat([df['Study area'], df['Study Area.1']]).dropna().unique()
     embeddings = {s: model.encode(s, convert_to_tensor=True) for s in all_study_areas}
 
@@ -103,7 +168,22 @@ def calculate_study_area_score(df: pd.DataFrame) -> pd.Series:
 
 
 def calculate_professional_similarity_score(df: pd.DataFrame) -> pd.Series:
-    """Calculates semantic similarity score between candidate's background and job description"""
+    """
+    Calculate semantic similarity between candidate's background and job description.
+
+    Compares sector and last role against job family and job title using sentence
+    embeddings and cosine similarity.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame with 'Sector', 'Last Role', 'Job Family Hiring', and 'Job Title Hiring'.
+
+    Returns
+    -------
+    pandas.Series
+        A Series of professional similarity scores.
+    """
     def build_text(*fields: str) -> Optional[str]:
         non_empty = [str(f).strip() for f in fields if pd.notna(f) and str(f).strip()]
         if not non_empty:
@@ -134,7 +214,22 @@ def calculate_professional_similarity_score(df: pd.DataFrame) -> pd.Series:
 
 
 def create_candidate_text(row: pd.Series) -> str:
-    """Creates concatenated text summary of candidate's profile"""
+    """
+    Create a text description summarizing a candidate's profile.
+
+    Combines fields such as education, sector, last role, experience, and skills
+    into a single formatted string.
+
+    Parameters
+    ----------
+    row : pandas.Series
+        A row from the candidate DataFrame.
+
+    Returns
+    -------
+    str
+        A text summary of the candidate.
+    """
     parts = []
 
     if pd.notna(row.get('Study Title')) and pd.notna(row.get('Study area')):
@@ -160,7 +255,22 @@ def create_candidate_text(row: pd.Series) -> str:
 
 
 def create_job_text(row: pd.Series) -> str:
-    """Creates concatenated text summary of job profile and requirements"""
+    """
+    Create a text description summarizing a job posting.
+
+    Combines job title, department, job description, and requirements into a
+    single formatted string for use in NLP models.
+
+    Parameters
+    ----------
+    row : pandas.Series
+        A row from the job DataFrame.
+
+    Returns
+    -------
+    str
+        A text summary of the job posting.
+    """
     parts = []
 
     if pd.notna(row.get('Job Title Hiring')):
@@ -192,7 +302,21 @@ def create_job_text(row: pd.Series) -> str:
 
 
 def prepare_nlp_text_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Creates candidate_text and job_text columns for NLP similarity calculations"""
+    """
+    Create candidate_text and job_text columns for NLP similarity calculations.
+
+    This function adds text summaries for both candidate and job profiles to the DataFrame.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        The input DataFrame with candidate and job information.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with added 'candidate_text' and 'job_text' columns.
+    """
     df_processed = df.copy()
     df_processed['candidate_text'] = df_processed.apply(create_candidate_text, axis=1).fillna("")
     df_processed['job_text'] = df_processed.apply(create_job_text, axis=1).fillna("")
@@ -200,7 +324,21 @@ def prepare_nlp_text_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def calculate_distance(coord1: Tuple[float, float], coord2: Tuple[float, float]) -> Optional[float]:
-    """Computes geodesic distance in kilometers between two coordinate pairs"""
+    """
+    Compute geodesic distance in kilometers between two coordinate pairs.
+
+    Parameters
+    ----------
+    coord1 : tuple of float
+        First coordinate as (latitude, longitude).
+    coord2 : tuple of float
+        Second coordinate as (latitude, longitude).
+
+    Returns
+    -------
+    float or None
+        Distance in kilometers, or None if calculation fails.
+    """
     try:
         return geodesic(coord1, coord2).kilometers
     except:
