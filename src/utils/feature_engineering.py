@@ -7,10 +7,11 @@ from sentence_transformers import SentenceTransformer, util
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from geopy.distance import geodesic
-from typing import List
+from typing import List, Tuple, Optional, Dict, Union
 warnings.filterwarnings('ignore')
 
 def calculate_study_title_score(df: pd.DataFrame) -> pd.Series:
+    """Calculates normalized difference score between candidate and required study levels"""
     ordered_levels = [
         "Middle school diploma",
         "High school graduation",
@@ -22,16 +23,16 @@ def calculate_study_title_score(df: pd.DataFrame) -> pd.Series:
     ]
 
     level_to_rank = {level: idx for idx, level in enumerate(ordered_levels)}
-    max_distance = len(ordered_levels) - 1  # 6 in this case
+    max_distance = len(ordered_levels) - 1
 
-    def _calculate_score(candidate_level, required_level):
+    def _calculate_score(candidate_level: str, required_level: str) -> Union[float, np.nan]:
         if pd.isna(candidate_level) or pd.isna(required_level):
             return np.nan
         if candidate_level not in level_to_rank or required_level not in level_to_rank:
             return np.nan
 
         diff = level_to_rank[candidate_level] - level_to_rank[required_level]
-        return diff / max_distance  # preserve sign, normalize
+        return diff / max_distance
 
     return df.apply(
         lambda row: _calculate_score(row.get('Study Title'), row.get('Study Level')),
@@ -40,16 +41,16 @@ def calculate_study_title_score(df: pd.DataFrame) -> pd.Series:
 
 
 def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
+    """Calculates normalized difference between candidate and required experience"""
     candidate_exps = df['Years Experience_int']
     job_exps = df['Years Experience.1_int']
     global_min = pd.concat([candidate_exps, job_exps]).min()
     global_max = pd.concat([candidate_exps, job_exps]).max()
     max_range = global_max - global_min if global_max != global_min else 1  
- 
-    def _calculate_score(candidate_exp, job_req_exp):
+
+    def _calculate_score(candidate_exp: float, job_req_exp: float) -> float:
         if pd.isna(job_req_exp):
             return 0
-
         diff = candidate_exp - job_req_exp
         return diff / max_range
 
@@ -58,40 +59,40 @@ def calculate_experience_match_score(df: pd.DataFrame) -> pd.Series:
         axis=1
     ) 
 
-def calculate_salary_fit_score(df: pd.DataFrame, is_expected=True) -> pd.Series:
-    def _calculate_score(expected_ral, min_ral, max_ral):
 
+def calculate_salary_fit_score(df: pd.DataFrame, is_expected: bool = True) -> pd.Series:
+    """Calculates how well expected or current salary fits into the job salary range"""
+    def _calculate_score(expected_ral: float, min_ral: float, max_ral: float) -> Union[float, np.nan]:
         if pd.isna(expected_ral) or pd.isna(min_ral) or pd.isna(max_ral):
             return np.nan
-
         if expected_ral >= min_ral and expected_ral <= max_ral:
             return 1.0 
 
-        if expected_ral < min_ral:
-            distance = expected_ral - min_ral
-        elif expected_ral > max_ral:
-            distance = expected_ral - max_ral
-
+        distance = expected_ral - min_ral if expected_ral < min_ral else expected_ral - max_ral
         range_size = max_ral - min_ral
-        scale_factor = range_size if range_size > 0 else min_ral # Avoid zero/negative division
-
-        if scale_factor <= 0: scale_factor = 1000 
-
+        scale_factor = range_size if range_size > 0 else min_ral
+        if scale_factor <= 0:
+            scale_factor = 1000
         return distance / scale_factor
+
     return df.apply(
-        lambda row: _calculate_score(row.get('Expected Ral' if is_expected else 'Current Ral'), row.get('Minimum Ral'), row.get('Ral Maximum')),
+        lambda row: _calculate_score(
+            row.get('Expected Ral' if is_expected else 'Current Ral'),
+            row.get('Minimum Ral'),
+            row.get('Ral Maximum')
+        ),
         axis=1
     )
 
 
 model = SentenceTransformer('all-MiniLM-L6-v2') 
 
-def calculate_study_area_score(df):
-    # Precompute embeddings
+def calculate_study_area_score(df: pd.DataFrame) -> pd.Series:
+    """Calculates semantic similarity score between candidate and required study areas"""
     all_study_areas = pd.concat([df['Study area'], df['Study Area.1']]).dropna().unique()
     embeddings = {s: model.encode(s, convert_to_tensor=True) for s in all_study_areas}
 
-    def _score(a, b):
+    def _score(a: str, b: str) -> Union[float, np.nan]:
         if pd.isna(a) or pd.isna(b):
             return np.nan
         emb_a = embeddings.get(a)
@@ -100,23 +101,25 @@ def calculate_study_area_score(df):
 
     return df.apply(lambda row: _score(row.get('Study area'), row.get('Study Area.1')), axis=1)
 
+
 def calculate_professional_similarity_score(df: pd.DataFrame) -> pd.Series:
-    def build_text(*fields):
+    """Calculates semantic similarity score between candidate's background and job description"""
+    def build_text(*fields: str) -> Optional[str]:
         non_empty = [str(f).strip() for f in fields if pd.notna(f) and str(f).strip()]
         if not non_empty:
             return None
         return ' | '.join(non_empty)
 
-    embedding_cache = {}
+    embedding_cache: Dict[str, any] = {}
 
-    def get_embedding(text):
+    def get_embedding(text: str):
         if text in embedding_cache:
             return embedding_cache[text]
         embedding = model.encode(text, convert_to_tensor=True)
         embedding_cache[text] = embedding
         return embedding
 
-    def _similarity(row):
+    def _similarity(row: pd.Series) -> Union[float, np.nan]:
         candidate_text = build_text(row.get('Sector'), row.get('Last Role'))
         job_text = build_text(row.get('Job Family Hiring'), row.get('Job Title Hiring'))
 
@@ -129,7 +132,9 @@ def calculate_professional_similarity_score(df: pd.DataFrame) -> pd.Series:
 
     return df.apply(_similarity, axis=1)
 
-def create_candidate_text(row):
+
+def create_candidate_text(row: pd.Series) -> str:
+    """Creates concatenated text summary of candidate's profile"""
     parts = []
 
     if pd.notna(row.get('Study Title')) and pd.notna(row.get('Study area')):
@@ -153,7 +158,9 @@ def create_candidate_text(row):
 
     return ". ".join(parts) + "."
 
-def create_job_text(row):
+
+def create_job_text(row: pd.Series) -> str:
+    """Creates concatenated text summary of job profile and requirements"""
     parts = []
 
     if pd.notna(row.get('Job Title Hiring')):
@@ -185,26 +192,16 @@ def create_job_text(row):
 
 
 def prepare_nlp_text_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Creates combined text columns for candidate profile and job requirements.
-
-    Args:
-        df: Input DataFrame. Assumes parsed experience columns exist if needed in text.
-
-    Returns:
-        DataFrame with 'candidate_text' and 'job_text' columns added.
-    """
-    df_processed = df.copy() # Work on a copy
-
-    # Create text columns, filling potential NaNs with empty strings for NLP
+    """Creates candidate_text and job_text columns for NLP similarity calculations"""
+    df_processed = df.copy()
     df_processed['candidate_text'] = df_processed.apply(create_candidate_text, axis=1).fillna("")
     df_processed['job_text'] = df_processed.apply(create_job_text, axis=1).fillna("")
-
     return df_processed
 
 
-def calculate_distance(coord1, coord2):
+def calculate_distance(coord1: Tuple[float, float], coord2: Tuple[float, float]) -> Optional[float]:
+    """Computes geodesic distance in kilometers between two coordinate pairs"""
     try:
         return geodesic(coord1, coord2).kilometers
     except:
-        return None  
+        return None
