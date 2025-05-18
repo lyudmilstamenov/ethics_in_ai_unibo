@@ -9,6 +9,11 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
    :caption: Model Notebook:
 
    model
+   src/model
+   ../src/model
+   model.ipynb
+   src/model.ipynb
+   ../src/model.ipynb
 
 .. toctree::
    :maxdepth: 2
