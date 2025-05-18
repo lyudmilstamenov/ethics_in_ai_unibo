@@ -6,13 +6,13 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
 
 .. toctree::
    :maxdepth: 2
-   :caption: Model Notebook 5:
+   :caption: Main Notebook:
 
    model
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Utilities:
 
    feature_engineering
    data_cleaning
