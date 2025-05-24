@@ -27,9 +27,9 @@ def plot_metrics(plot_data, metric_name, repair_levels, protected_attributes):
                       Expected keys format: 
                       plot_data[attribute][f"{metric_name}_mean_{repair_level}"] and 
                       plot_data[attribute][f"{metric_name}_std_{repair_level}"]
-    metric_name (str): Name of the metric to plot (e.g., "accuracy", "f1", "demographic_parity_difference").
+    metric_name (str): Name of the metric to plot.
     repair_levels (list): List of repair levels used in the fairness pipeline.
-    protected_attributes (list): List of sensitive attributes (e.g., ["gender", "race"]).
+    protected_attributes (list): List of sensitive attributes.
 
     Returns:
     None
@@ -62,7 +62,7 @@ def plot_metrics_grouped(results, protected_attributes, repair_levels):
     - repair_levels (list): List of repair levels used in the experiment.
 
     Returns:
-    - None
+    None
     """
     import pandas as pd
     import numpy as np
