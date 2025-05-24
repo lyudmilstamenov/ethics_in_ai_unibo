@@ -16,6 +16,7 @@ Welcome to the documentation for **Predictive Modeling on Real Hiring Data: Expl
 
    feature_engineering
    data_cleaning
+   plot
 
 Indices and tables
 ==================
