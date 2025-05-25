@@ -30,9 +30,6 @@ def plot_metrics(plot_data, metric_name, repair_levels, protected_attributes):
     metric_name (str): Name of the metric to plot.
     repair_levels (list): List of repair levels used in the fairness pipeline.
     protected_attributes (list): List of sensitive attributes.
-
-    Returns:
-    None
     """
     plt.figure(figsize=(12, 6))
     
@@ -60,16 +57,7 @@ def plot_metrics_grouped(results, protected_attributes, repair_levels):
     - results (dict): Nested dictionary of results keyed by attribute and repair level.
     - protected_attributes (list): List of sensitive attribute names.
     - repair_levels (list): List of repair levels used in the experiment.
-
-    Returns:
-    None
     """
-    import pandas as pd
-    import numpy as np
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-
-    # Define metric groups
     perf_order = ['accuracy', 'precision', 'recall', 'f1', 'roc_auc']
     perf_labels = ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC']
     
@@ -78,7 +66,6 @@ def plot_metrics_grouped(results, protected_attributes, repair_levels):
     fair_labels = ['Dem. Parity Ratio', 'Equal. Odds Ratio',
                    'Dem. Parity Diff', 'Equal. Odds Diff']
     
-    # Flatten results to DataFrame
     plot_data = []
     for attr in protected_attributes:
         for rl in repair_levels:
@@ -100,18 +87,15 @@ def plot_metrics_grouped(results, protected_attributes, repair_levels):
         perf_data_all = attr_data[attr_data['Metric'].isin(perf_order)]
         fair_data_all = attr_data[attr_data['Metric'].isin(fair_order)]
 
-        # Compute y-limits per metric type for this attribute
         perf_ymin, perf_ymax = perf_data_all['Value'].min() - 0.05, perf_data_all['Value'].max() + 0.05
         fair_ymin, fair_ymax = fair_data_all['Value'].min() - 0.05, fair_data_all['Value'].max() + 0.05
 
-        # Create figure
         fig, axes = plt.subplots(2, len(repair_levels), figsize=(30, 16))
         fig.suptitle(f'Metrics for Protected Attribute: {attr}', fontsize=18, y=1.02)
 
         for j, rl in enumerate(repair_levels):
             rl_data = attr_data[attr_data['Repair Level'] == rl]
 
-            # Performance (top row)
             perf_data = rl_data[rl_data['Metric'].isin(perf_order)]
             perf_palette = {metric: sns.color_palette("Blues", len(perf_order))[i] 
                             for i, metric in enumerate(perf_order)}
@@ -127,7 +111,6 @@ def plot_metrics_grouped(results, protected_attributes, repair_levels):
             axes[0, j].set_xlabel('')
             axes[0, j].set_ylabel('Score', fontsize=12)
 
-            # Add mean ± std value labels
             for k, metric in enumerate(perf_order):
                 metric_vals = perf_data[perf_data['Metric'] == metric]['Value']
                 mean = metric_vals.mean()
@@ -135,7 +118,6 @@ def plot_metrics_grouped(results, protected_attributes, repair_levels):
                 axes[0, j].text(k, mean + 0.02, f'{mean:.2f}±{std:.2f}', 
                                 ha='center', va='bottom', fontsize=10)
 
-            # Fairness (bottom row)
             fair_data = rl_data[rl_data['Metric'].isin(fair_order)]
             fair_palette = {metric: sns.color_palette("Blues_d", len(fair_order))[i] 
                             for i, metric in enumerate(fair_order)}
@@ -159,5 +141,34 @@ def plot_metrics_grouped(results, protected_attributes, repair_levels):
                                va='bottom' if mean > 0 else 'top', fontsize=10)
 
         plt.tight_layout()
-        plt.savefig(f'metrics_{attr}.png', bbox_inches='tight', dpi=300, facecolor='white')
         plt.show()
+
+
+def print_fairness_results_table(plot_data, metrics_keys, repair_levels):
+    """
+    Print fairness and performance metrics in a formatted table.
+
+    Parameters:
+    - plot_data: dict of aggregated metrics (mean and std) from experiments
+    - metrics_keys: list of metric names (e.g., 'accuracy', 'precision', etc.)
+    - repair_levels: list of levels of fairness constraint used (e.g., [0, 0.5, 1])
+    """
+    for sensitive_attr, metric_data in plot_data.items():
+        print(f"\n=== Results for sensitive attribute: {sensitive_attr} ===\n")
+        rows = []
+        index = []
+
+        for metric in metrics_keys:
+            row = []
+            for level in repair_levels:
+                mean_key = f"{metric}_mean_{level}"
+                std_key = f"{metric}_std_{level}"
+                mean_val = metric_data.get(mean_key, np.nan)
+                std_val = metric_data.get(std_key, np.nan)
+                formatted = f"{mean_val:.3f} ± {std_val:.3f}"
+                row.append(formatted)
+            rows.append(row)
+            index.append(metric)
+
+        df_result = pd.DataFrame(rows, columns=[f"Repair {lvl}" for lvl in repair_levels], index=index)
+        print(df_result.to_string())
