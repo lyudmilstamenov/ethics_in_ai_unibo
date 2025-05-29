@@ -111,11 +111,6 @@ cd ..
 git clone git@github.com:pikalab-unibo-students/master-thesis-dizio-ay2324.git
 ```
 
-Or alternatively, create a symbolic link:
-```bash
-ln -s ../master-thesis-dizio-ay2324 fairlib
-```
-
 ### 2. Install Dependencies
 
 Install the required Python packages:
