@@ -100,7 +100,7 @@ Utilities used throughout the project are organized into three categories:
 - Testing of **four bias mitigation techniques**.
 - In-depth evaluation using multiple **performance and fairness metrics**.
 
-## 📦 How to Run
+## How to Run
 
 To execute the notebooks, make sure you have the necessary dependencies and that the `FairLib` repository is available as described below.
 
